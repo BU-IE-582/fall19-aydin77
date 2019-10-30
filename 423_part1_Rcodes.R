@@ -197,6 +197,8 @@ mu
 std
 
 #-------------QUESTION 3------------
+counter1<-0
+
 
 #Define upper and lower limits
 upper_limit <- qnorm(0.9995, mean = mu, sd = std)
@@ -209,6 +211,7 @@ for(i in 1:512) {
   for(j in 1:512) {
     if(img_gray[i,j] < lower_limit | img_gray[i,j] > upper_limit) {
       img_gray_new[i,j] = 0
+      counter1<-counter1+1
     }
     else {img_gray_new[i,j] = img_gray[i,j]}
   }
@@ -233,6 +236,8 @@ rasterImage(img_gray_new[,],0, 0, 512, 512)
 
 #-------------QUESTION 4------------
 
+counter2<-0
+
 img_gray_new2<-img_gray
 
 #Identify and change the values of the pixels which are out of boundries (detect anomalies in the image)
@@ -254,7 +259,9 @@ for (i in 1:10) {
     for (a in (((i-1)*51)+1):(i*51)) {
       for (b in (((j-1)*51)+1):(j*51)) {
         if( img_gray_new2[a,b] < lower_limit | img_gray_new2[a,b] > upper_limit) 
-        {img_gray_new2[a,b]=0}
+        {img_gray_new2[a,b]=0
+        counter2<-counter2+1
+        }
       }
     }
   }
@@ -273,5 +280,4 @@ rasterImage(img_gray[,],0, 0, 512, 512)
 
 plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "anomaly-detected")
 rasterImage(img_gray_new2[,],0, 0, 512, 512)
-
 
