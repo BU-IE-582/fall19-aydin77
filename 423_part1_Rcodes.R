@@ -232,7 +232,8 @@ rasterImage(img_gray[,],0, 0, 512, 512)
 plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "anomaly-detected")
 rasterImage(img_gray_new[,],0, 0, 512, 512)
 
-
+#Number of black dots (detected anomalies)
+counter1
 
 #-------------QUESTION 4------------
 
@@ -267,6 +268,8 @@ for (i in 1:10) {
   }
 }
 
+#Number of black dots (detected anomalies)
+counter2
 
 #Plot anomaly detected image
 par(mfrow=c(1,1))
