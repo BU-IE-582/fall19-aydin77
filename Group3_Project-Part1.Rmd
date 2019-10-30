@@ -1,0 +1,360 @@
+---
+title: "IE423 Project Part-1"
+author: "M. Avni ULUSOY, Enes KOSER, Abdullatif AYDIN, O. Faruk CAVAS, Mustafa KESER"
+output: html_document 
+---
+## Introduction
+
+In this project we are supposed to be quality engineers who works on an image processing project and we need to control quality of the products by utilizing the image processing techniques. We determined our product as a sweater. After capturing the photo of the product's surface, we made required initial transformations such as croping and resizing. Hence, our image is ready to make required analyses.
+
+## Part 1
+
+First, required packages are installed.
+
+```{r}
+#install.packages("jpeg")
+library(jpeg)
+```
+
+### Question 1
+
+The image is read with "readJPEG" function and stored in "img" variable. 
+
+By "str" function it is observed the matrix has 3 dimensions and 512 x 512 x 3 values.  
+
+```{r}
+#Read the image
+img <- readJPEG("C:/Users/koser/Desktop/2019-2020_Fall_Boun/IE 423/kazak.jpg", native = FALSE)
+str(img)
+```
+
+### Question 2 
+
+The "img" variable is a three dimensional matrix. Dimensions can be seen below.
+
+```{r}
+dim(img)
+```
+
+#### a)
+
+Image is displayed. We use the par function to determine how many plots to display in a single plot screen.After this adjustment, rasterImage function is used to display image.
+
+```{r}
+#Plot the original image
+par(mfrow=c(1,1))
+plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Original")
+rasterImage(img[,,],0, 0, 512, 512)
+
+```
+
+#### b)
+
+Now, each channel is displayed in a single plot. One of them is original plot, the other ones are Red, Green, Blue respectively. Images are composed of red bule and green colors and in the img variable these color values are stored as three separate matrices.
+
+```{r}
+#Plot each channel of the image (Original, R, G, B) on a single plot
+par(mfrow=c(2,2))
+plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Original")
+rasterImage(img[,,],0, 0, 512, 512)
+
+plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Red")
+rasterImage(img[,,1],0, 0, 512, 512)
+
+plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Green")
+rasterImage(img[,,2],0, 0, 512, 512)
+
+plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Blue")
+rasterImage(img[,,3],0, 0, 512, 512)
+
+```
+
+### Question 3 
+
+img variable is divided into to 3 submatrices. For each channel, the average of each column is calculated and plotted as a line on a single plot. ColMeans function is used to take the average.
+
+```{r}
+#Get the matrix of each channel and store them in corresponding variables (red, green, blue)
+red <- img[,,1]
+green <- img[,,2]
+blue <- img[,,3]
+
+```
+
+```{r}
+#Plot the line graph of the average of columns for each channel (red, green, blue) on a single plot
+par(mfrow=c(1,1))
+x=(1:length(colMeans(red)))
+plot(x,colMeans(red), type="l",col="red", ylim=c(0, 1))
+lines(x,colMeans(green),col="green")
+lines(x,colMeans(blue),col="blue")
+
+```
+
+### Question 4
+
+We split the image vertically. Then, We substracted left pixel values from right. 
+
+While doing substraction,we confronted a problem that some of the substracted pixel values are smaller than zero but it is not acceptable for an image variable. We solve this problem by adding for loop that checks the value whether it is smaller than zero, then equates it to zero.
+
+We applied this process for each channel individually and also for the colored image.
+
+```{r}
+#Subtract the half of the image from the other half
+
+#RED
+red_s <- red
+
+#Do substraction
+red_s[,257:512] <- red[,257:512] - red[,1:256]
+
+#Equate the values of the cells to zero whose values are smaller than zero 
+for(i in 1:512) {
+  for(j in 1:512) {
+    if(red_s[i,j] < 0) {
+      red_s[i,j] = 0
+    }
+  }
+}
+
+#Plot substracted image for red channel
+par(mfrow=c(1,1))
+plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Substracted Red Channel")
+rasterImage(red_s,0, 0, 512, 512)
+
+
+#GREEN
+green_s <- green
+
+#Do substraction
+green_s[,257:512] <- green[,257:512] - green[,1:256]
+
+#Equate the values of the cells to zero whose values are smaller than zero 
+for(i in 1:512) {
+  for(j in 1:512) {
+    if(green_s[i,j] < 0) {
+      green_s[i,j] = 0
+    }
+  }
+}
+
+#Plot subtarcted image for green channel
+par(mfrow=c(1,1))
+plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Substracted Green Channel")
+rasterImage(green_s,0, 0, 512, 512)
+
+
+#BLUE
+blue_s <- blue
+
+#Do substraction
+blue_s[,257:512] <- blue[,257:512] - blue[,1:256]
+
+#Equate the values of the cells to zero whose values are smaller than zero
+for(i in 1:512) {
+  for(j in 1:512) {
+    if(blue_s[i,j] < 0) {
+      blue_s[i,j] = 0
+    }
+  }
+}
+
+
+#Plot subtarcted image for green channel
+par(mfrow=c(1,1))
+plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Substracted Blue Channel")
+rasterImage(blue_s,0, 0, 512, 512)
+
+
+#COLORED IMAGE
+
+#Plot the subtracted image for the original colored image
+img_subtracted <- img
+
+img_subtracted[,,1] <- red_s[,]
+img_subtracted[,,2] <- green_s[,]
+img_subtracted[,,3] <- blue_s[,]
+
+par(mfrow=c(1,1))
+plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Substracted Original")
+rasterImage(img_subtracted ,0 ,0 ,512 , 512)
+```
+
+### Quesiton 5
+
+To apply median filtering, we installed EBImage package. By using medianFilter function we filtered the image with different window sizes(5x5, 11x11, 31x31).
+
+According to the results, It can be seen as window size increases the acquired image becomes more smooth. Since our image has homogenous color distribution, the effect of filtering with small window sizes cannot be realised easily. With increasing window size, the change occurs more radically. All pixel values become more close.
+
+```{r}
+#install.packages("BiocManager")
+BiocManager::install("EBImage")
+library(EBImage)
+
+
+a<-medianFilter(img,2) # radius 2, windows size 5 
+par(mfrow=c(1,2))
+plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Original")
+rasterImage(img[,,],0, 0, 512, 512)
+
+plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Smoothed 5x5")
+rasterImage(a[,,],0, 0, 512, 512)
+
+```
+```{r}
+b<-medianFilter(img,5) # radius 5, windows size 11 
+
+par(mfrow=c(1,2))
+plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Original")
+rasterImage(img[,,],0, 0, 512, 512)
+
+plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Smoothed 11x11")
+rasterImage(b[,,],0, 0, 512, 512)
+```
+
+```{r}
+c<-medianFilter(img,15) # radius 15, windows size 31 
+
+par(mfrow=c(1,2))
+plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Original")
+rasterImage(img[,,],0, 0, 512, 512)
+
+plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Smoothed 31x31")
+rasterImage(c[,,],0, 0, 512, 512)
+```
+
+## PART 2
+
+In this part , we converted the original image to grayscale and made analysis according to this new image.
+
+### Question 1
+
+In order to find distribution of pixel values, we have plotted histogram of them. The histogram of the pixel values of the image looks like normal distribution.  
+
+```{r}
+#read the gray scaled version of the original image
+img_gray <- readJPEG("C:/Users/koser/Desktop/2019-2020_Fall_Boun/IE 423/kazak_gray.jpg", native = FALSE)
+
+img_gray <- img_gray[,,1]
+par(mfrow=c(1,1))
+plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Gray-scale")
+rasterImage(img_gray[,],0, 0, 512, 512)
+
+#Plot the histogram of the image
+hist(img_gray)
+```
+
+
+### Question 2
+
+In question 2 we estimated the parameters after the assumption that the pixel values are normally distributed. For the estimation of mean and variance, we have used sample mean and sample variance respectively.
+
+```{r}
+mu <- mean(img_gray)
+std <- sd(img_gray)
+mu
+std
+
+```
+
+
+### Question 3
+
+After estimating the parameters of our distribution,we have determined upper and lower limits with 0.001 significance level. The value of pixels that are outside of the upper and lower limits are replaced with 0, hence their colors has been changed to black. After plotting the originial image and the new one, we observed some black dots all over the image.These pixels are generally totally white pixels, since their values are very close to 1.Also, some pixels whose color are very close to zero  are also changed. Since the distribution of our image is normal with mean 0.35, what we observed is expectable. 
+
+```{r}
+counter1<-0
+
+#Define upper and lower limits
+upper_limit <- qnorm(0.9995, mean = mu, sd = std)
+lower_limit <- qnorm(0.0005, mean = mu, sd = std)
+
+img_gray_new <- img_gray
+
+#Identify and change the values of the pixels which are out of boundries (detect anomalies in the image)
+for(i in 1:512) {
+  for(j in 1:512) {
+    if(img_gray[i,j] < lower_limit | img_gray[i,j] > upper_limit) {
+      img_gray_new[i,j] = 0
+      counter1<-counter1+1
+    }
+    else {img_gray_new[i,j] = img_gray[i,j]}
+  }
+}
+
+#Plot anomaly detected image
+plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Gray-scale")
+rasterImage(img_gray_new[,],0, 0, 512, 512)
+
+#Plot the histogram of the anomaly detected image
+hist(img_gray_new)
+
+#Plot anomaly detected image and the original gray_scaled image together
+par(mfrow=c(1,2))
+plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Original")
+rasterImage(img_gray[,],0, 0, 512, 512)
+
+plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Anomaly-detected")
+rasterImage(img_gray_new[,],0, 0, 512, 512)
+
+```
+
+### Question 4
+
+We have performed the operation done in previous example with the windows with 51x51 size. Here, the local structures are more important. In this case, we see more black points than the previous one. When we considered all image as one distribution, its variance is expected to be larger than variance of each windows. Hence, it would cover more pixel values with the same significant values. This leads total image has less number of pixels out of the limits Besides, each window is supposed to have close pixel values. It is normal that it detects more pixels that are out of limits. This can be seen from counter1 and counter2 values.
+
+```{r}
+
+counter2<-0
+img_gray_new2<-img_gray
+
+#Identify and change the values of the pixels which are out of boundries (detect anomalies in the image)
+r<-0
+for (i in 1:10) {
+  for (j in 1:10) {
+    indeks<-1
+    for (k in (((i-1)*51)+1):(i*51)) {
+      for (x in (((j-1)*51)+1):(j*51)) {
+        r[indeks]<-img_gray_new2[k,x]
+        indeks<-indeks+1
+      }
+    }
+    mu<-mean(r)
+    std<-sd(r)
+    lower_limit<-qnorm(0.0005,mu,std)
+    upper_limit<-qnorm(0.9995,mu,std)
+    
+    for (a in (((i-1)*51)+1):(i*51)) {
+      for (b in (((j-1)*51)+1):(j*51)) {
+        if( img_gray_new2[a,b] < lower_limit | img_gray_new2[a,b] > upper_limit) 
+        {img_gray_new2[a,b]=0
+        counter2<-counter2+1
+        }
+      }
+    }
+  }
+}
+
+
+#Plot anomaly detected image
+par(mfrow=c(1,1))
+plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Original")
+rasterImage(img_gray_new2[,],0, 0, 512, 512)
+
+#Plot anomaly detected image and the original gray_scaled image together
+par(mfrow=c(1,2))
+plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Original")
+rasterImage(img_gray[,],0, 0, 512, 512)
+
+plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Anomaly-detected")
+rasterImage(img_gray_new2[,],0, 0, 512, 512)
+
+counter1
+counter2
+
+```
+
+
+
+
+
