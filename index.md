@@ -13,4 +13,4 @@ We are the Group 3. Our group members are:
 [Here](files/Group3_Project-Part1.html) is our Project Part 1.
 
 ## Project Part 2
-[Here](files/empty.html) is our Project Part 2.
+[Here](files/Group3_Project-Part2.html) is our Project Part 2.

@@ -1,0 +1,274 @@
+---
+title: "IE423 Project Part-2"
+author: "Enes Köser, Abdullatif Aydýn,Omer Faruk Cavas,Muhammet Avni Ulusoy,Mustafa Keser"
+date: "01 12 2019"
+output: html_document
+---
+
+
+## Task 1
+
+In this part of the project, we are asked to find out of control pixels using the grayscale version of the photo that is given to us. When we make the photo grayscale, it becomes 2 dimensions and we create the new photo accordingly. In order to find out of control pixels, we take the mean of the first row of the photograph with 400 * 400 dimension. After finding Mean, we calculate the standard deviation of the specified row. Once standard deviation is found, we can create a six sigma control chart. After the control chart is created, we set the out of control pixels to 0 and repeat this process for each row and column. Eventually, we can plot the data and compare the original image with the new image which was arranged according to six sigma control charts.
+
+To apply required processes, firstly we installed required packages.
+
+```{r}
+#install.packages("jpeg")
+library(jpeg)
+library("graphics")
+```
+
+We read the image, examine structure and dimensions of it.
+
+```{r}
+#read the gray scaled version of the original image
+img <- readJPEG("C:/Users/omerf/group_3gray.jpeg")
+
+#Structure of the img variable
+str(img)
+
+#Dimensions of the img variable
+dim(img)
+```
+
+Then, we plotted the image.
+
+
+```{r}
+#Plot the grayscaled image
+img <- img[,,1]
+par(mfrow=c(1,1))
+plot(1, type="n", xlim=c(0, 400), ylim=c(0, 400), main = "gray-scale")
+
+rasterImage(img[,],0, 0, 400, 400)
+```
+
+We plotted the histogram. The histogram is right-skewed because image is grayscale and it has mostly gray values. That leads to see more pixels values close to zero.
+
+```{r}
+#Plot the histogram of the image
+hist(img)
+```
+
+
+For the example, we created a control chart for the first row of the img and plotted it. Red lines represent the upper and lower control limits. Dots represent the values. It can be seen from the plot that at some part of the row, values goes up significantly. 
+
+```{r}
+#Create a x control chart for row1
+row1 <- img[1,]
+
+cl <- mean(row1)
+ucl <- mean(row1) + 3*sd(row1)
+lcl <- max(0, mean(row1) - 3*sd(row1))
+
+plot(row1, xlim=c(0, 400), ylim=c(0, 1))
+abline(h=mean(row1), col="blue")
+abline(h=ucl, col="red")
+abline(h=lcl, col="red")
+```
+
+
+With the same way, we created a control chart for rows and changed out of control pixels to zero. The result can be seen from plotted images. From the plots we can see out of control points due to misalignment in horizantal lines at the bottom left of the image. Other out of control points are also mostly around misaligned lines. 
+
+```{r}
+#Create a control chart for ROWS
+img_new <- img
+
+for (i in 1:400) {
+  ucl <- mean(img[i,]) + 3*sd(img[i,])
+  lcl <- max(0, mean(img[i,]) - 3*sd(img[i,]))
+  
+  #Identify and change the values of the pixels which are out of the control limits (detect anomalies in the image)
+  for(j in 1:400) {
+    if(img[i,j] < lcl | img[i,j] > ucl) {
+      img_new[i,j] = 0
+    }
+    else {img_new[i,j] = img[i,j]}
+  }
+  
+}
+#Plot the new anomaly wrt rows detected image with original image
+par(mfrow=c(1,2))
+
+plot(1, type="n", xlim=c(0, 400), ylim=c(0, 400), main = "Original Image")
+rasterImage(img[,],0, 0, 400, 400)
+
+plot(1, type="n", xlim=c(0, 400), ylim=c(0, 400), main = "Anomaly-detected Image")
+rasterImage(img_new[,],0, 0, 400, 400)
+```
+
+Besides, we created control chart for the columns. Same processes are made for columns, too.After we create the control charts for columns, we have seen that out of control points generally occur on white points, which may be because our image is mostly gray. 
+
+```{r}
+#Create a control charts for COLUMNS
+img_new <- img
+
+for (i in 1:400) {
+  ucl <- mean(img[,i]) + 3*sd(img[,i])
+  lcl <- max(0, mean(img[,i]) - 3*sd(img[,i]))
+  
+  #Identify and change the values of the pixels which are out of the control limits (detect anomalies in the image)
+  for(j in 1:400) {
+    if(img[i,j] < lcl | img[i,j] > ucl) {
+      img_new[i,j] = 0
+    }
+    else {img_new[i,j] = img[i,j]}
+  }
+  
+}
+#Plot the new anomaly wrt columns detected image with original image
+par(mfrow=c(1,2))
+
+plot(1, type="n", xlim=c(0, 400), ylim=c(0, 400), main = "Original Image")
+rasterImage(img[,],0, 0, 400, 400)
+
+plot(1, type="n", xlim=c(0, 400), ylim=c(0, 400), main = "Anomaly-detected Image")
+rasterImage(img_new[,],0, 0, 400, 400)
+
+```
+
+
+
+
+## Task 2
+At first we downloaded the required library.
+
+```{r}
+#install.packages("jpeg")
+library(jpeg)
+
+```
+
+Then, we read the image with readJPEG function and plotted it.
+
+```{r pressure, echo=FALSE}
+
+#read the gray scaled version of the original image
+img <- readJPEG("C:/Users/omerf/group_3gray.jpeg")
+#read the gray scaled version of the original image
+#Plot the grayscaled image
+img <- img[,,1]
+par(mfrow=c(1,1))
+plot(1, type="n", xlim=c(0, 400), ylim=c(0, 400), main = "gray-scale")
+rasterImage(img[,],0, 0, 400, 400)
+```
+
+Now, we need to construct a linear regression model that predicts center pixel values of each 51x51 window. Other pixels will be the explanatory variables. To be able to fit regression model, we should prepare a dataframe. Due to the long time that is required to fit all values, we construct the model with a small dataframe. We gather that dataframe by taking values three by three.
+
+In order to predict all center values, we gather all values in a dataframe that has 350x350(122500) rows. Besides, number of columns in dataframe will be 51x51(2601) due to number of pixels in the windows.   
+```{r}
+#Create an empty matrix for regression (for original image --> nrow = 350*350 = 122500, ncol = 51*51 = 2601)
+df_allpix <- matrix(0, nrow = 122500, ncol = 2601) 
+
+n <- 51  #Size of the window
+k <- 400  #Size of the original image
+#Create df for the all windows (This df will be used for prediction)
+row_ind <- 1
+for (i in (((n+1)/2) : (k - (n-1)/2))){
+  for (j in (((n+1)/2) : (k - (n-1)/2))){
+    
+    df_allpix[row_ind,] <- as.vector(img[(i-25):(i+25),(j-25):(j+25)]) 
+    row_ind <- row_ind+1
+  }
+}
+#Convert the data type of df_allpix object from matrix to dataframe
+df_allpix <- as.data.frame(df_allpix)
+
+```
+
+
+In order to construct model, we created a dataframe with 117*117(13689) rows and 51x51(2601) columns by passing over the pixels three by three.    
+
+```{r}
+#Crate df by getting windows by 3 steps (This df will be used to construct linear model)
+df_trainpix <- matrix(0, nrow = 13689, ncol = 2601) #117*117=13689 windows were used
+
+row_ind <- 1
+for (i in seq((n+1)/2, k - (n-1)/2, by = 3)){
+  for (j in seq((n+1)/2, k - (n-1)/2, by = 3)){
+    
+    df_trainpix[row_ind,] <- as.vector(img[(i-25):(i+25),(j-25):(j+25)]) 
+    row_ind <- row_ind+1
+    
+  }
+}
+#Convert the data type of df_trainpix object from matrix to dataframe
+df_trainpix <- as.data.frame(df_trainpix)
+
+```
+
+We constructed the linear regression with the data we obtained above.
+
+```{r}
+#Construct linear model predicting centeral pixel values of each window
+linearMod  <- lm(V1301~., data = df_trainpix)
+
+#Predict all center pixel values
+predicted <- predict(linearMod, newdata = df_allpix)
+
+#Get the difference(residuals) between actual and predicted pixel values
+residual_pixels <- as.vector(predicted - df_allpix$V1301)
+
+#Plot the histogram of the residuals to check normality
+hist(residual_pixels, nclass = 100)
+
+```
+
+After constructing the linear regression, we should find residuals and create a control chart for them. Hence we got residuals from model and created a control chart and plotted it.From the figure below, we can see that there are lots of out of control points,both above the upper limit and below the lower limit. 
+
+```{r}
+#Create limits for control chart for residuals
+cl <- mean(residual_pixels)
+ucl <- mean(residual_pixels) + 3*sd(residual_pixels)
+lcl <- mean(residual_pixels) - 3*sd(residual_pixels)
+
+#Plot the control chart
+par(mfrow=c(1,1))
+plot(residual_pixels)
+abline(h=cl, col="blue")
+abline(h=ucl, col="red")
+abline(h=lcl, col="red")
+```
+
+In the project it is asked to change pixel values with residuals that are out of control to zero. Therefore, we created a residual matrix and determined the pixels corresponding to residuals that are out of control with a for loop. Then,we changed those pixels in the orjinal image to zero.
+
+According to the original and anomaly-detected images we have plotted above, we have obtained some observations about locations of the black pixels. Firstly, black pixels are generally located between 100-200 on x axis and 200-300 on y axis. We realized that these are the locations where irregularities appear. That is, when we look at the patterns in the image,we see that the horizontal lines are more congested in that locations.Moreover, black pixels are also located around where sharp transitions occur. In other words, if there is sudden transition from white pixels to dark pixels, the model cannot predict the pixels accurately.
+
+```{r}
+#Create a matrix from obtained residual vector
+residual_matrix <- matrix(residual_pixels, nrow = 350, ncol = 350, byrow = TRUE)
+
+#Identify and change the values of the pixels which are out of the control limits (detect anomalies in the image)
+img_new = img #img is the original image, img_new is the anomaly-detected image
+
+counter = 0
+for (i in 1:(k-n+1)) {
+  for (j in 1:(k-n+1)) {
+    
+    if(residual_matrix[i,j] < lcl | residual_matrix[i,j] > ucl) {
+      img_new[i+25,j+25] = 0
+      counter <- counter+1
+    }
+  }    
+}
+#Print the number of pixels which are out of control limits
+counter
+
+#Plot the new anomaly detected image along with the original image
+par(mfrow=c(1,2))
+
+plot(1, type="n", xlim=c(0, 400), ylim=c(0, 400), main = "Original Image")
+rasterImage(img[,],0, 0, 400, 400)
+
+plot(1, type="n", xlim=c(0, 400), ylim=c(0, 400), main = "Anomaly-detected Image")
+rasterImage(img_new[,],0, 0, 400, 400)
+
+```
+
+Since we have some factors with a high correlation, we may have multicollinearity between some predictors. Because they give same information, removing one of the correlated factors usually doesn't drastically reduce the model accuracy. We may consider using stepwise regression to remove these variables, but we may not determine the correct predictors to remove due to similarity of factors. Another approach that we advice is taking the average of the rows in the window of size 51*51 instead of using each pixel value, and predicting the center pixel value by these 51 factors. This can be reasonable especially for our image since it consists of horizantal lines with similar pixel values which may cause autocorrelation.   
+
+                
+
+
+
+
