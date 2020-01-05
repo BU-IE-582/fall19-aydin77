@@ -1,0 +1,462 @@
+---
+title: "IE423 Project Part 3"
+author: "Enes Koser, Abdullatif Aydin, Omer Faruk Cavas, Avni Ulusoy, Mustafa Keser"
+date: "05.01.2020"
+output: html_document
+---
+
+First, we installed required packages.
+
+```{r}
+#install.packages("jpeg")
+#install.packages("wvtool")
+library(jpeg)
+library(wvtool)
+```
+
+
+Note: Our actual code has a for loop capsulating all applied steps on an image. To be able to explain our code explicitly in this markdown, we excluded this for loop and revealed the process only for one image (Fabric20.jpg). To run the codes without confronting an error in markdown, we added the following line of code (t is the index of an image used in for loop). 
+
+
+```{r}
+#Set required variables to be able to run our code in r markdown (t is the variable that iterates through capsulating for loop which enables us to run entire code for all 20 images
+t = 20
+```
+
+We read the gray-scaled and colored image.
+
+```{r}
+#Read the gray-scaled image
+  path = paste("C:/Users/Latif/Desktop/ProjectPart3/Images_gray/", t, ".jpg", sep = "")
+  img <- readJPEG(path, native = FALSE)
+  
+  #Read the colored image
+  path2 = paste("C:/Users/Latif/Desktop/ProjectPart3/Images/", "Fabric", t, ".jpg", sep = "")
+  colored_img <- readJPEG(path2, native = FALSE)
+```
+
+We did preliminary steps as follows.
+
+```{r}
+#Reduce the dimension of the image matrix to two  
+  img <- img[,,1]
+  
+  #Create new matrices for both original gray-scaled image and anomaly detected image
+  img_new <- img
+  img_original <- img
+  
+  #Set size of the squares
+  N<-8
+  
+  #Set the counter to zero which counts the detected problematic points
+  counter=0
+```
+
+Then we applied gabor filtering to the image, since it made the defected areas more obvious when it is compared to normal gray-scaled image.
+The gary-scaled and and gabor filter applied image can be seen below.
+
+```{r}
+#Apply gabor filtering to the image
+  test <- gabor.filter(x=img, lamda=2, theta=60, bw=8, phi=0, asp=0.1, disp=FALSE)
+  gaborr_filtered<-test[["filtered_img"]]
+  img <-gaborr_filtered/max(gaborr_filtered)
+  
+  #Plot original and gabor filter applied images
+  par(mfrow=c(1,2))
+  
+  #Original Image
+  plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = paste("Original Image ", t, sep = ""))
+  rasterImage(img_new[,],0, 0, 512, 512)
+  
+  #Anomaly detected Image
+  plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Gabor-filtered Image")
+  rasterImage(img[,],0, 0, 512, 512)
+```
+
+After doing the filtering operation on the image, we worked from now on with this transformed image. Firstly, we calculated values of sample mean (X-bar), X-bar-bar,  sample standard deviation for each sample (s), s-bar.
+
+```{r}
+#Calculate X-bar-bar value
+  x_bar_bar<-mean(img[,])
+  sd_sum<-0
+  
+  #Set an array to store x-bar values of windows
+  mean_array<-matrix(data=NA,4096,1)
+  
+  #Set an array to store s values
+  sd_array<-matrix(data=NA,4096,1)
+  indis<-0
+  
+  #Calculate sample standard deviations
+  for(i in seq(1,512-N+1,N)){
+    for(j in seq(1,512-N+1,N)){
+      sd_sum<-sd_sum+sd( img[(i:(i+N-1)),(j:(j+N-1))] )
+    }
+  }
+  #Calculate s-bar
+  sd_bar<-sd_sum/((512*512)/(N*N))
+```
+
+Then we calculated the upper and lower control limits for both x-bar and s-chart values by using previously calculated x-bar and s values along with required variables which are calculated according to the Table Control Chart.
+
+```{r}
+ #Calculate control chart limits for x-bar
+  A_3<-(3*(4*N*N-3))/(4*(N*N-1)*sqrt(N*N))
+  ucl <- x_bar_bar+A_3*sd_bar*(4-diff(range(img_original))^3)
+  lcl <- x_bar_bar-A_3*sd_bar*(4-diff(range(img_original))^3)
+    
+  #Calculate control chart limits for s chart
+  c_4<-4*(N-1)/(4*N-3)
+  B_3<-1-(3*sqrt(1-c_4*c_4))/c_4
+  B_4<-1+(3*sqrt(1-c_4*c_4))/c_4
+  ucl_s <- B_4*sd_bar*3
+  lcl_s <- B_3*sd_bar
+  #Set lover limit to zero if it is negative
+  if(ucl_s<0){
+    ucl_s<-0
+  }
+```
+
+We iterated through each window in a for loop and equate the values of the windows to zero when their s or x-bar values falls out of control limits.
+
+```{r}
+ #Make black points when anomaly is detected
+  for(i in seq(1,512-N+1,N)){
+    for(j in seq(1,512-N+1,N)){
+      sample_mean<-mean( img[(i:(i+N-1)),(j:(j+N-1))] )
+      sample_sd<-sd( img[(i:(i+N-1)),(j:(j+N-1))] )
+      
+      mean_array[indis]<-sample_mean
+      sd_array[indis]<-sample_sd
+      indis <- indis+1
+      
+      if((sample_mean<lcl | sample_mean>ucl) | (sample_sd<lcl_s | sample_sd>ucl_s)){
+        img_new[(i:(i+N-1)),(j:(j+N-1))]<-0
+        counter=counter+1
+      }
+    }
+  }
+```
+
+If there is no point is marked as problematic, we controlled for vertically or horizontally oriented thin problems.
+The code for detecting vertical oriented thin problems is as follows.
+
+```{r}
+#Control the vertical errors
+  if(counter == 0){
+    img_new <- img_original
+    x_bar_bar<-mean(img[,])
+    sd_sum<-0
+    
+    #Calculate s value for each vertical line
+    for(j in 1:512){
+      sd_sum<-sd_sum+sd(img[,j])
+    }
+    sd_bar<-sd_sum/512
+    
+    #Calculate control chart limits for x-bar chart
+    A_3<-(3*(4*512-3))/(4*(512-1)*sqrt(512))
+    ucl <- x_bar_bar+A_3*sd_bar*4
+    lcl <- x_bar_bar-A_3*sd_bar*4
+    
+    #Plot thin problenmatic vertical lines
+    for(j in 1:512){
+      colum_mean<-mean(img[,j])
+      
+      if(colum_mean < lcl | colum_mean > ucl) {
+        for(i in 1:512){
+          img_new[i,j] = 0
+        }
+      }
+      else {img_new[i,j] = img[i,j]}
+    }
+  }
+```
+
+We applied same method for horizontally oriented thin problems.
+ 
+```{r}
+ if(counter == 0){
+    img_new <- img_original
+    x_bar_bar<-mean(img[,])
+    sd_sum<-0
+    
+    #Calculate s value for each horizontal line
+    for(j in 1:512){
+      sd_sum<-sd_sum+sd(img[j,])
+    }
+    sd_bar<-sd_sum/512
+    
+    #Calculate control chart limits for x-bar chart
+    A_3<-(3*(4*512-3))/(4*(512-1)*sqrt(512))
+    ucl <- x_bar_bar+A_3*sd_bar*3
+    lcl <- x_bar_bar-A_3*sd_bar*3
+    
+    #Plot thin problenmatic horizontal lines
+    for(i in 1:512){
+      row_mean<-mean(img[i,])
+      
+      if(row_mean < lcl | row_mean > ucl) {
+        for(j in 1:512){
+          img_new[i,j] = 0
+        }
+      }
+      else {img_new[i,j] = img[i,j]}
+    }
+  }
+```
+
+Then we control the points which are considered as problematic in previous steps. In order to eliminate wrongly detected unproblematic points, we examined the black points. To do this we apllied the following approach. If there are individual points which do not have problematic neighbor points, we have elimnated them. This is because, problematic areas have generally neighbouring points which are painted as black. However we do not apply this method if there are too few black points all over the image, since in such cases the problematic area is very small and apllying this removes also the correctly detected problematic points. 
+
+```{r}
+if(counter > 18){
+    for(i in seq(N+1,512-N-N+1,N)){
+      for(j in seq(N+1,512-N-N+1,N)){
+        
+        if(img_new[i,j]==0){
+          if((img_new[i-N,j]!=0) & (img_new[i,j-N]!=0) & (img_new[i,j+N]!=0) & (img_new[i+N,j]!=0)){
+            img_new[(i:(i+N-1)),(j:(j+N-1))]<-img_original[(i:(i+N-1)),(j:(j+N-1))]
+            
+          }
+        }
+      }
+    }
+  }
+```
+
+After applying our defect detection algorithm, we plotted the original and anomaly detected image.
+
+```{r}
+ #Plot original and anomaly detected images
+  par(mfrow=c(1,2))
+  
+  #Original Image
+  plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = paste("Original Image ", t, sep = ""))
+  rasterImage(colored_img[,,],0, 0, 512, 512)
+  
+  #Anomaly detected Image
+  plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Anomaly-detected Image")
+  rasterImage(img_new[,],0, 0, 512, 512)
+```
+
+We plotted also x-bar and s charts.
+
+```{r}
+#Plot x-bar and s-chart for images  
+  par(mfrow=c(1,2))
+  
+  #control chart for x bar
+  plot(mean_array, xlim=c(0, 4096), ylim=c(0, 1), main = paste("X-bar Chart of Image ", t, sep = ""))
+  abline(h=x_bar_bar, col="blue")
+  abline(h=ucl, col="red")
+  abline(h=lcl, col="red")
+  
+  #control chart for s
+  plot(sd_array, xlim=c(0, 4096), ylim=c(0, 1), main = paste("S Chart of Image ", t, sep = ""))
+  abline(h=sd_bar, col="blue")
+  abline(h=ucl_s, col="red")
+  abline(h=lcl_s, col="red")
+```
+
+We added all of our codes to apply same process for all twenty images. 
+
+Below this code block, We plotted the original and anomaly detected images and their corresponding x-bar and s charts for each image.
+
+```{r}
+#Apply all required steps for each 20 images which are already converted into gray scale format 
+for (t in 1:20){
+  
+  #Read the gray-scaled image
+  path = paste("C:/Users/Latif/Desktop/ProjectPart3/Images_gray/", t, ".jpg", sep = "")
+  img <- readJPEG(path, native = FALSE)
+  
+  #Read the colored image
+  path2 = paste("C:/Users/Latif/Desktop/ProjectPart3/Images/", "Fabric", t, ".jpg", sep = "")
+  colored_img <- readJPEG(path2, native = FALSE)
+  
+  #Take samples from image as windows sized of 8x8
+  
+  #Reduce the dimension of the image matrix to two  
+  img <- img[,,1]
+  
+  #Create new matrices for both original gray-scaled image and anomaly detected image
+  img_new <- img
+  img_original <- img
+
+  #Apply gabor filtering to the image
+  test <- gabor.filter(x=img, lamda=2, theta=60, bw=8, phi=0, asp=0.1, disp=FALSE)
+  gaborr_filtered<-test[["filtered_img"]]
+  img <-gaborr_filtered/max(gaborr_filtered)
+  
+  #Set size of the squares
+  N<-8
+  
+  #Set the counter to zero which counts the detected problematic points
+  counter=0
+  
+  #Calculate X-bar-bar value
+  x_bar_bar<-mean(img[,])
+  sd_sum<-0
+  
+  #Set an array to store x-bar values of windows
+  mean_array<-matrix(data=NA,4096,1)
+  
+  #Set an array to store s values
+  sd_array<-matrix(data=NA,4096,1)
+  indis<-0
+  
+  #Calculate sample standard deviations
+  for(i in seq(1,512-N+1,N)){
+    for(j in seq(1,512-N+1,N)){
+      sd_sum<-sd_sum+sd( img[(i:(i+N-1)),(j:(j+N-1))] )
+    }
+  }
+  #Calculate s-bar
+  sd_bar<-sd_sum/((512*512)/(N*N))
+  
+  #Calculate control chart limits for x-bar
+  A_3<-(3*(4*N*N-3))/(4*(N*N-1)*sqrt(N*N))
+  ucl <- x_bar_bar+A_3*sd_bar*(4-diff(range(img_original))^3)
+  lcl <- x_bar_bar-A_3*sd_bar*(4-diff(range(img_original))^3)
+    
+  #Calculate control chart limits for s chart
+  c_4<-4*(N-1)/(4*N-3)
+  B_3<-1-(3*sqrt(1-c_4*c_4))/c_4
+  B_4<-1+(3*sqrt(1-c_4*c_4))/c_4
+  ucl_s <- B_4*sd_bar*3
+  lcl_s <- B_3*sd_bar
+  #Set lover limit to zero if it is negative
+  if(ucl_s<0){
+    ucl_s<-0
+  }
+  
+  
+  #Make black points when anomaly is detected
+  for(i in seq(1,512-N+1,N)){
+    for(j in seq(1,512-N+1,N)){
+      sample_mean<-mean( img[(i:(i+N-1)),(j:(j+N-1))] )
+      sample_sd<-sd( img[(i:(i+N-1)),(j:(j+N-1))] )
+      
+      mean_array[indis]<-sample_mean
+      sd_array[indis]<-sample_sd
+      indis <- indis+1
+      
+      if((sample_mean<lcl | sample_mean>ucl) | (sample_sd<lcl_s | sample_sd>ucl_s)){
+        img_new[(i:(i+N-1)),(j:(j+N-1))]<-0
+        counter=counter+1
+      }
+    }
+  }
+  
+  #If there is no point is marked as problematic, control for vertically or horizontally oriented thin problems
+  
+  #Control the vertical errors
+  if(counter == 0){
+    img_new <- img_original
+    x_bar_bar<-mean(img[,])
+    sd_sum<-0
+    
+    #Calculate s value for each vertical line
+    for(j in 1:512){
+      sd_sum<-sd_sum+sd(img[,j])
+    }
+    sd_bar<-sd_sum/512
+    
+    #Calculate control chart limits for x-bar chart
+    A_3<-(3*(4*512-3))/(4*(512-1)*sqrt(512))
+    ucl <- x_bar_bar+A_3*sd_bar*4
+    lcl <- x_bar_bar-A_3*sd_bar*4
+    
+    #Plot thin problenmatic vertical lines
+    for(j in 1:512){
+      colum_mean<-mean(img[,j])
+      
+      if(colum_mean < lcl | colum_mean > ucl) {
+        for(i in 1:512){
+          img_new[i,j] = 0
+        }
+      }
+      else {img_new[i,j] = img[i,j]}
+    }
+  }
+  
+  
+  #Control the horizontal errors
+  else if(counter == 0){
+    img_new <- img_original
+    x_bar_bar<-mean(img[,])
+    sd_sum<-0
+    
+    #Calculate s value for each horizontal line
+    for(j in 1:512){
+      sd_sum<-sd_sum+sd(img[j,])
+    }
+    sd_bar<-sd_sum/512
+    
+    #Calculate control chart limits for x-bar chart
+    A_3<-(3*(4*512-3))/(4*(512-1)*sqrt(512))
+    ucl <- x_bar_bar+A_3*sd_bar*3
+    lcl <- x_bar_bar-A_3*sd_bar*3
+    
+    #Plot thin problenmatic horizontal lines
+    for(i in 1:512){
+      row_mean<-mean(img[i,])
+      
+      if(row_mean < lcl | row_mean > ucl) {
+        for(j in 1:512){
+          img_new[i,j] = 0
+        }
+      }
+      else {img_new[i,j] = img[i,j]}
+    }
+  }
+
+  
+  #Do not mark black the points which are falsely detected as problematic
+  if(counter > 18){
+    for(i in seq(N+1,512-N-N+1,N)){
+      for(j in seq(N+1,512-N-N+1,N)){
+        
+        if(img_new[i,j]==0){
+          if((img_new[i-N,j]!=0) & (img_new[i,j-N]!=0) & (img_new[i,j+N]!=0) & (img_new[i+N,j]!=0)){
+            img_new[(i:(i+N-1)),(j:(j+N-1))]<-img_original[(i:(i+N-1)),(j:(j+N-1))]
+            
+          }
+        }
+      }
+    }
+  }
+  
+  
+  #Plot original and anomaly detected images
+  par(mfrow=c(1,2))
+  
+  #Original Image
+  plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = paste("Original Image ", t, sep = ""))
+  rasterImage(colored_img[,,],0, 0, 512, 512)
+  
+  #Anomaly detected Image
+  plot(1, type="n", xlim=c(0, 512), ylim=c(0, 512), main = "Anomaly-detected Image")
+  rasterImage(img_new[,],0, 0, 512, 512)
+  
+  
+  #Plot x-bar and s-chart for images  
+  par(mfrow=c(1,2))
+  
+  #control chart for x bar
+  plot(mean_array, xlim=c(0, 4096), ylim=c(0, 1), main = paste("X-bar Chart of Image ", t, sep = ""))
+  abline(h=x_bar_bar, col="blue")
+  abline(h=ucl, col="red")
+  abline(h=lcl, col="red")
+  
+  #control chart for s
+  plot(sd_array, xlim=c(0, 4096), ylim=c(0, 1), main = paste("S Chart of Image ", t, sep = ""))
+  abline(h=sd_bar, col="blue")
+  abline(h=ucl_s, col="red")
+  abline(h=lcl_s, col="red")
+  
+}
+```
+
+
+

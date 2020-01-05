@@ -6,7 +6,6 @@ We are the Group 3. Our group members are:
 3. Enes Köser
 4. Muhammet Avni Ulusoy
 5. Mustafa Keser
-6. Miraç İşcan
 
 
 ## Project Part 1
@@ -14,3 +13,6 @@ We are the Group 3. Our group members are:
 
 ## Project Part 2
 [Here](files/Group3_Project-Part2.html) is our Project Part 2.
+
+## Project Part 3
+[Here](files/Group3_Project-Part3.html) is our Project Part 3.
