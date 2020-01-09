@@ -18,4 +18,4 @@ We are the Group 3. Our group members are:
 [Here](files/Group3_Project-Part3.html) is our Project Part 3.
 
 ## Project Report
-[Here](Part3/Group3_Project-Part3.html) is our Report file of the project.
+[Here](part3/Part 3 Report.pdf) is our Report file of the project.
